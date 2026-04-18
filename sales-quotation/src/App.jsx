@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Login from "./pages/Login";
+import QuoteRequest from "./pages/QuoteRequest";
 
 function App() {
   /*const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("token"));
@@ -27,7 +28,7 @@ function App() {
   return (
     <div className="App min-h-screen bg-slate-50">
       {/*{!isLoggedIn ? (*/}
-        <Login
+        <QuoteRequest
         // onLoginSuccess={handleLoginSuccess}
         />
       {/*}) : (

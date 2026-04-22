@@ -1,11 +1,23 @@
 import React from 'react';
 import CalendarPanel from "../components/CalendarPanel";
 import { useState } from "react";
-const [isModalOpen, setIsModalOpen] = useState(false);
+import RequestorModal from "../components/RequestorModal";
 
 function QuoteRequest() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequestor, setSelectedRequestor] = useState(null); //simpan data requestor terpilih
+
+  const handleSelectRequestor = (requestor) => {
+    setSelectedRequestor(requestor);
+    setIsModalOpen(false); // Tutup modal setelah pilih
+  };
   return (
     <div className='min-h-screen bg-slate-50'>
+      <RequestorModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSelect={handleSelectRequestor}
+      />
       <div className="px-2 py-2">
     <h1 className="text-slate-800 font-bold text-xl">
       Add New Quote Request
@@ -21,8 +33,9 @@ function QuoteRequest() {
               {/* Requested By */}
               <label className='text-md font-medium'>Requested By:</label>
               <div className='flex w-full md:w-64 border-2 border-slate-300 rounded-md overflow-hidden focus-within:border-blue-500'>
-                <input type="text" className="w-full outline-none px-2 py-1" readOnly/>
-                <button type="button" className="p-2 bg-slate-100 border-l border-slate-300 hover:bg-slate-200 text-slate-600">
+                <input type="text" className="w-full outline-none px-2 py-1" readOnly placeholder="Select Customer..."
+                      value={selectedRequestor ? selectedRequestor.contact_person : ''}/>
+                <button type="button" onClick={() => setIsModalOpen(true)} className="p-2 bg-slate-100 border-l border-slate-300 hover:bg-slate-200 text-slate-600">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 </button>
               </div>

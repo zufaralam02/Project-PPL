@@ -11,6 +11,9 @@ function QuoteRequest() {
     setSelectedRequestor(requestor);
     setIsModalOpen(false); // Tutup modal setelah pilih
   };
+
+  const [tripType, setTripType] = useState('One Way or Multi Leg'); // Default value
+
   return (
     <div className='min-h-screen bg-slate-50'>
       <RequestorModal 
@@ -55,10 +58,32 @@ function QuoteRequest() {
 
               {/* Trip Type */}
               <label className='text-md font-medium'>Trip Type:</label>
-              <div className='relative w-full md:w-64 group'>
-                <input type="text" className="w-full border-2 border-slate-300 rounded-md focus:border-blue-500 outline-none px-2 py-1 pr-10" readOnly />
+              <div className='relative w-full md:w-64'>
+                <select 
+                  className="w-full border-2 border-slate-300 rounded-md focus:border-blue-500 outline-none px-2 py-1.5 appearance-none bg-white cursor-pointer"
+                  value={tripType}
+                  onChange={(e) => setTripType(e.target.value)}
+                >
+                  <option value="One Way or Multi Leg">One Way or Multi Leg</option>
+                  <option value="Round Trip">Round Trip</option>
+                </select>
+                
+                {/* Icon Panah Custom (untuk menggantikan appearance-none) */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="text-slate-400"
+                  >
+                    <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
+                  </svg>
                 </div>
               </div>
             </div>

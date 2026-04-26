@@ -17,23 +17,32 @@ function QuoteRequest() {
   const [representative, setRepresentative] = useState("");
   const [isManualRep, setIsManualRep] = useState(false);
 
-  // State baru untuk trips (Array of Objects)
+  // State untuk trips (Array of Objects)
   const [trips, setTrips] = useState([
     { adep: "", ades: "", date: "", time: "", pax: "" }
   ]);
+  
+  const [bookedDates, setBookedDates] = useState([]);
 
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem('token');
       try {
-        const [resAircraft, resAirport] = await Promise.all([
+        // Tambahkan resDrafts di dalam array destrukturisasi
+        const [resAircraft, resAirport, resDrafts] = await Promise.all([
           axios.get('https://project-ppl-backend-production-9d58.up.railway.app/api/aircraft', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('https://project-ppl-backend-production-9d58.up.railway.app/api/airport', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get('https://project-ppl-backend-production-9d58.up.railway.app/api/airport', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('https://project-ppl-backend-production-9d58.up.railway.app/api/draft-quotation', { headers: { Authorization: `Bearer ${token}` } })
         ]);
+        
         setAircrafts(resAircraft.data.data || resAircraft.data);
         setAirports(resAirport.data.data || resAirport.data);
-      } catch (err) { console.error("Fetch Error:", err); }
+        // Sekarang resDrafts sudah aman digunakan
+        setBookedDates(resDrafts.data.data || resDrafts.data);
+      } catch (err) { 
+        console.error("Fetch Error:", err); 
+      }
     };
     fetchData();
   }, []);
@@ -56,6 +65,46 @@ function QuoteRequest() {
     setIsModalOpen(false);
   };
 
+  const resetForm = () => {
+  setSelectedRequestor(null);
+  setSelectedAircraft("");
+  setTripType('One Way or Multi Leg');
+  setRepresentative("");
+  setIsManualRep(false);
+  setTrips([{ adep: "", ades: "", date: "", time: "", pax: "" }]);
+};
+
+const todayString = new Date().toISOString().split('T')[0];
+
+  // Logic Submit ke API
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // 1. Ambil tanggal hari ini (set jam ke 00:00:00 untuk perbandingan murni tanggal)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 2. Validasi apakah ada tanggal di masa lalu di dalam array trips
+  const hasPastDate = trips.some(trip => {
+    if (!trip.date) return false;
+    const inputDate = new Date(trip.date);
+    return inputDate < today;
+  });
+
+  if (hasPastDate) {
+    alert("Cannot book for a past date. Please select today or a future date.");
+    return;
+  }
+
+  // Validasi dasar lainnya
+  if (!selectedRequestor || !selectedAircraft || trips[0].adep === "" || trips[0].ades === "") {
+    alert("Please complete the form (Customer, Aircraft, and Route).");
+    return;
+  }
+
+  // ... (Sisa kode payload dan axios post tetap sama)
+};
+
   // Auto-fill representative
   useEffect(() => {
     if (selectedRequestor && !isManualRep) {
@@ -75,11 +124,10 @@ function QuoteRequest() {
   };
 
   const removeTrip = (index) => {
-  // Jangan hapus jika hanya sisa 1 baris
-  if (trips.length > 1) {
-    const newTrips = trips.filter((_, i) => i !== index);
-    setTrips(newTrips);
-  }
+    if (trips.length > 1) {
+      const newTrips = trips.filter((_, i) => i !== index);
+      setTrips(newTrips);
+    }
   };
 
   return (
@@ -90,7 +138,6 @@ function QuoteRequest() {
       <div className="px-4 py-3 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm">
         <h1 className="text-slate-800 font-bold text-xl tracking-tight">Add New Quote Request</h1>
         <button onClick={handleLogout} className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-600 hover:text-white transition-all active:scale-95 border border-red-200">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           LOGOUT
         </button>
       </div>
@@ -98,15 +145,19 @@ function QuoteRequest() {
       <div className="lg:flex lg:border lg:border-slate-300 lg:m-4">
         {/* Left Side: Form */}
         <div className="flex flex-col lg:w-1/2 bg-slate-50 border-r border-slate-300 p-5">
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleSubmit}>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4 items-center'>
               
+              {/* Requested By */}
               <label className='text-md font-medium'>Requested By:</label>
               <div className='flex border-2 border-slate-300 rounded-md overflow-hidden bg-white'>
                 <input type="text" className="w-full outline-none px-2 py-1" readOnly placeholder="Select Customer..." value={selectedRequestor ? selectedRequestor.company : ''}/>
-                <button type="button" onClick={() => setIsModalOpen(true)} className="p-2 bg-slate-100 hover:bg-slate-200"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                <button type="button" onClick={() => setIsModalOpen(true)} className="p-2 bg-slate-100 hover:bg-slate-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                </button>
               </div>
 
+              {/* Representative */}
               <label className='text-md font-medium flex items-center gap-2'>
                 Representative:
                 <div className="flex items-center gap-1 cursor-pointer">
@@ -116,37 +167,31 @@ function QuoteRequest() {
               </label>
               <input type="text" className={`w-full border-2 rounded-md px-2 py-1 ${!isManualRep ? 'bg-slate-100 text-slate-500' : 'bg-white'}`} value={representative} onChange={(e) => setRepresentative(e.target.value)} readOnly={!isManualRep} />
 
+              {/* Aircraft */}
               <label className='text-md font-medium'>Aircraft:</label>
               <div className='relative'>
-                <select className="w-full border-2 border-slate-300 rounded-md px-2 py-1.5 appearance-none bg-white cursor-pointer" value={selectedAircraft} onChange={(e) => setSelectedAircraft(e.target.value)}>
+                <select required className="w-full border-2 border-slate-300 rounded-md px-2 py-1.5 appearance-none bg-white cursor-pointer" value={selectedAircraft} onChange={(e) => setSelectedAircraft(e.target.value)}>
                   <option value="">-- Select Aircraft --</option>
                   {aircrafts.map((ac) => <option key={ac.id} value={ac.id}>{ac.name}</option>)}
                 </select>
-                <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
-                </div>
               </div>
 
+              {/* Trip Type */}
               <label className='text-md font-medium'>Trip Type:</label>
-              <div className='relative'>
-                <select className="w-full border-2 border-slate-300 rounded-md px-2 py-1.5 appearance-none bg-white cursor-pointer" value={tripType} onChange={(e) => setTripType(e.target.value)}>
-                  <option value="One Way or Multi Leg">One Way or Multi Leg</option>
-                  <option value="Round Trip">Round Trip</option>
-                </select>
-                <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
-                </div>
-              </div>
+              <select className="w-full border-2 border-slate-300 rounded-md px-2 py-1.5 bg-white cursor-pointer" value={tripType} onChange={(e) => setTripType(e.target.value)}>
+                <option value="One Way or Multi Leg">One Way or Multi Leg</option>
+                <option value="Round Trip">Round Trip</option>
+              </select>
             </div>
 
-            {/* Actions Section */}
+            {/* Actions & Submit */}
             <div className='mt-8 flex justify-end gap-3'>
               {tripType === 'Round Trip' && (
                 <button type="button" onClick={addTrip} className="bg-green-600 hover:bg-green-700 text-white w-10 h-10 flex items-center justify-center font-bold rounded-full shadow-md transition-all active:scale-90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 </button>
               )}
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-8 py-2 font-bold rounded shadow-md transition-all active:scale-95">
+              <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white px-8 py-2 font-bold rounded shadow-md transition-all active:scale-95">
                 Submit
               </button>
             </div>
@@ -158,39 +203,36 @@ function QuoteRequest() {
               </div>
 
               {trips.map((trip, index) => (
-                <div key={index} className='grid grid-cols-6 gap-2 mb-2 animate-in fade-in slide-in-from-top-1'>
-                  <select className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm bg-white' value={trip.adep} onChange={(e) => handleTripChange(index, 'adep', e.target.value)}>
+                <div key={index} className='grid grid-cols-6 gap-2 mb-2 items-center animate-in fade-in slide-in-from-top-1'>
+                  <select required className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm bg-white' value={trip.adep} onChange={(e) => handleTripChange(index, 'adep', e.target.value)}>
                     <option value="">Select...</option>
                     {airports.map((ap) => <option key={ap.id} value={ap.code}>{ap.code}</option>)}
                   </select>
-                  <select className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm bg-white' value={trip.ades} onChange={(e) => handleTripChange(index, 'ades', e.target.value)}>
+                  <select required className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm bg-white' value={trip.ades} onChange={(e) => handleTripChange(index, 'ades', e.target.value)}>
                     <option value="">Select...</option>
                     {airports.map((ap) => <option key={ap.id} value={ap.code}>{ap.code}</option>)}
                   </select>
-                  <input type="date" className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' value={trip.date} onChange={(e) => handleTripChange(index, 'date', e.target.value)} />
-                  <input type="time" className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' value={trip.time} onChange={(e) => handleTripChange(index, 'time', e.target.value)} />
-                  <input type="number" className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' value={trip.pax} onChange={(e) => handleTripChange(index, 'pax', e.target.value)} />
-                  {/* TOMBOL DELETE */}
+                  <input 
+                    required 
+                    type="date" 
+                    min={todayString} // Mencegah pilihan tanggal masa lalu di kalender browser
+                    className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' 
+                    value={trip.date} 
+                    onChange={(e) => handleTripChange(index, 'date', e.target.value)} 
+                  />
+                  <input required type="time" className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' value={trip.time} onChange={(e) => handleTripChange(index, 'time', e.target.value)} />
+                  <input required type="number" className='border-2 border-slate-300 rounded-md px-1 py-1 text-sm' value={trip.pax} onChange={(e) => handleTripChange(index, 'pax', e.target.value)} />
+                  
                   <div className='flex justify-center'>
-                    {index > 0 ? (
-                      <button 
-                        type="button" 
-                        onClick={() => removeTrip(index)}
-                        className="text-red-500 hover:bg-red-100 p-1.5 rounded-full transition-colors"
-                        title="Remove this leg"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-                        </svg>
+                    {index > 0 && (
+                      <button type="button" onClick={() => removeTrip(index)} className="text-red-500 hover:bg-red-100 p-1.5 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                       </button>
-                    ) : (
-                      <div className="w-[30px]"></div> // Spacer untuk baris pertama agar sejajar
                     )}
                   </div>
                 </div>
               ))}
             </div>
-
           </form>
         </div>
 
@@ -198,7 +240,10 @@ function QuoteRequest() {
         <div className="lg:w-1/2 bg-slate-50 border-l border-slate-300">
           <h1 className="text-white bg-blue-500 font-bold text-xl p-3">Calendar Availability</h1>
           <div className="p-2">
-            <CalendarPanel />
+            <CalendarPanel 
+              bookedDates={bookedDates} 
+              selectedAircraftId={selectedAircraft} 
+            />
           </div>
         </div>
       </div>

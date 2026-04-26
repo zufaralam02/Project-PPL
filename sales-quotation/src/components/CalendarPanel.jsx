@@ -71,36 +71,66 @@ function CalendarPanel() {
 
   // 3. Logika Penentuan Warna
   const getDayStatus = (day) => {
+  try {
+    // 1. Validasi awal: Jika pesawat belum dipilih, langsung return standar
     if (!selectedAircraft) return "bg-white text-slate-400";
 
+    // Buat waktu pembanding
     const checkDate = new Date(year, month, day);
     checkDate.setHours(0, 0, 0, 0);
+    const cTime = checkDate.getTime();
 
-    // Kriteria 1: Cek Booked (Draft Quotation) - PRIORITAS UTAMA (MERAH)
-    const isBooked = bookedData.some(item => {
-      const start = new Date(item.departure_date); // Sesuaikan dengan kolom db anda
-      const end = new Date(item.arrival_date);     // Sesuaikan dengan kolom db anda
-      start.setHours(0,0,0,0);
-      end.setHours(23,59,59,999);
-      return checkDate >= start && checkDate <= end;
+    // 2. Logika Booked (DRAFT QUOTATION)
+    // Pastikan bookedData adalah array sebelum melakukan .some
+    const isBooked = Array.isArray(bookedData) && bookedData.some(item => {
+      // Pastikan item ada dan ID cocok
+      if (!item || !item.aircraft_available_id) return false;
+      if (parseInt(item.aircraft_available_id) !== parseInt(selectedAircraft)) return false;
+
+      // Pastikan departure_date ada
+      if (!item.departure_date) return false;
+
+      const startDate = new Date(item.departure_date);
+      // Fallback ke departure_date jika return_date kosong
+      const endDate = item.return_date ? new Date(item.return_date) : new Date(item.departure_date);
+
+      // Cek apakah tanggal valid
+      if (isNaN(startDate.getTime())) return false;
+
+      const sTime = new Date(startDate).setHours(0, 0, 0, 0);
+      const eTime = new Date(endDate).setHours(23, 59, 59, 999);
+
+      return cTime >= sTime && cTime <= eTime;
     });
 
-    if (isBooked) return "bg-red-500 text-white font-bold";
+    if (isBooked) return "bg-red-500 text-white font-bold scale-105 z-10 shadow-md ring-2 ring-white";
 
-    // Kriteria 2: Cek Available (Aircraft Available) - (HIJAU)
-    const isAvailable = availabilityData.some(item => {
-      const start = new Date(item.available_start);
-      const end = new Date(item.available_end);
-      start.setHours(0,0,0,0);
-      end.setHours(23,59,59,999);
-      return checkDate >= start && checkDate <= end;
+    // 3. Logika Available (AIRCRAFT AVAILABLE)
+    const isAvailable = Array.isArray(availabilityData) && availabilityData.some(item => {
+      if (!item || !item.available_start || !item.available_end) return false;
+
+      const startDate = new Date(item.available_start);
+      const endDate = new Date(item.available_end);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return false;
+
+      const sTime = startDate.setHours(0, 0, 0, 0);
+      const eTime = endDate.setHours(23, 59, 59, 999);
+
+      return cTime >= sTime && cTime <= eTime;
     });
 
-    if (isAvailable) return "bg-green-500 text-white font-bold";
+    if (isAvailable) return "bg-green-500 text-white font-bold shadow-sm";
 
-    // Kriteria 3: Selain itu (PUTIH)
+    // Jika tidak ada yang cocok
     return "bg-white text-slate-800 border border-slate-100";
-  };
+
+  } catch (error) {
+    // Jika ada error mendadak (misal data corrupt), kembalikan warna putih agar tidak BLANK
+    console.error("Error in getDayStatus:", error);
+    return "bg-white text-slate-800 border border-slate-100";
+  }
+};
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));

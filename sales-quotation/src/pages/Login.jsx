@@ -19,7 +19,7 @@ function Login({ onLoginSuccess }) {
     try {
       // 2. Tembak ke API Backend Railway
       // Ganti URL dengan URL Railway Anda
-      const response = await axios.post('https://project-ppl-backend-production.up.railway.app/api/auth/login', {
+      const response = await axios.post('https://project-ppl-backend-production-9d58.up.railway.app/api/auth/login', {
         email: email,
         password: password
       });

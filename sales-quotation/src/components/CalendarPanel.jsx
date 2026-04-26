@@ -13,7 +13,7 @@ function CalendarPanel() {
   const year = currentDate.getFullYear();
   const monthName = currentDate.toLocaleString("default", { month: "long" });
 
-  const BASE_URL = 'https://project-ppl-backend-production.up.railway.app/api';
+  const BASE_URL = 'https://project-ppl-backend-production-9d58.up.railway.app/api';
 
   // 1. Fetch Daftar Aircraft
   useEffect(() => {
